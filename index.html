@@ -349,11 +349,12 @@ async function recarregarSupabase() {
   const [par, ins, rec, its, vrc, vcard, card, pend] = await Promise.all([
     sb.from('parametros').select('*').eq('empresa_id', E).single(),
     todos(() => sb.from('insumos').select('id,codigo,nome,categoria,unidade_compra,qtd_por_unidade_compra,unidade_base,preco_unidade_compra,fator_correcao').eq('empresa_id', E).order('codigo')),
-    todos(() => sb.from('receitas').select('id,slug,nome,tipo,categoria,rendimento,unidade_rendimento,modo_preparo').eq('empresa_id', E)),
-    todos(() => sb.from('receita_itens').select('id,receita_id,ordem,insumo_id,sub_receita_id,quantidade,observacao,receitas!inner(empresa_id)').eq('receitas.empresa_id', E).order('ordem')),
-    todos(() => sb.from('v_receita_custos').select('receita_id,custo_total,custo_por_unidade,insumos_sem_preco').eq('empresa_id', E)),
-    todos(() => sb.from('v_cardapio').select('*').eq('empresa_id', E).order('ordem')),
-    todos(() => sb.from('cardapio_itens').select('id,custo_manual,qtd_insumo').eq('empresa_id', E)),
+    todos(() => sb.from('receitas').select('id,slug,nome,tipo,categoria,rendimento,unidade_rendimento,modo_preparo').eq('empresa_id', E).order('id')),
+    // sem embed: receita_itens tem duas chaves para receitas (receita e sub-receita); o filtro por empresa é feito abaixo
+    todos(() => sb.from('receita_itens').select('id,receita_id,ordem,insumo_id,sub_receita_id,quantidade,observacao').order('id')),
+    todos(() => sb.from('v_receita_custos').select('receita_id,custo_total,custo_por_unidade,insumos_sem_preco').eq('empresa_id', E).order('receita_id')),
+    todos(() => sb.from('v_cardapio').select('*').eq('empresa_id', E).order('ordem').order('id')),
+    todos(() => sb.from('cardapio_itens').select('id,custo_manual,qtd_insumo').eq('empresa_id', E).order('id')),
     todos(() => sb.from('pendencias').select('*').eq('empresa_id', E).order('id')),
   ]);
   if (par.error) throw par.error;
@@ -361,7 +362,7 @@ async function recarregarSupabase() {
   S.parametros = {}; for (const k of ['markup_padrao', 'cmv_alvo', 'cmv_alvo_bebidas', 'markup_ifood', 'fator_preco_minimo', 'perda_bar', 'final_preco']) S.parametros[k] = n(par.data[k]);
   S.insumos = new Map(ins.map(i => [i.id, { id: i.id, codigo: i.codigo, nome: i.nome, categoria: i.categoria, unidade_compra: i.unidade_compra, qtd: n(i.qtd_por_unidade_compra), unidade_base: i.unidade_base, preco: n(i.preco_unidade_compra), fc: n(i.fator_correcao) }]));
   S.receitas = new Map(rec.map(r => [r.id, { id: r.id, slug: r.slug, nome: r.nome, tipo: r.tipo, categoria: r.categoria, rend: n(r.rendimento), unid: r.unidade_rendimento, modo: r.modo_preparo }]));
-  S.itens = its.map(i => ({ id: i.id, receita_id: i.receita_id, ordem: i.ordem, insumo_id: i.insumo_id, sub_id: i.sub_receita_id, qtd: n(i.quantidade), obs: i.observacao }));
+  S.itens = its.filter(i => S.receitas.has(i.receita_id)).map(i => ({ id: i.id, receita_id: i.receita_id, ordem: i.ordem, insumo_id: i.insumo_id, sub_id: i.sub_receita_id, qtd: n(i.quantidade), obs: i.observacao }));
   const extra = new Map(card.map(c => [c.id, c]));
   S.cardapio = vcard.map(c => ({ id: c.id, categoria: c.categoria, nome: c.nome, canal: c.canal, receita_id: c.receita_id, insumo_id: c.insumo_id, qtd_insumo: n(extra.get(c.id)?.qtd_insumo), custo_manual: n(extra.get(c.id)?.custo_manual), custo_embalagem: n(c.custo_embalagem) || 0, preco: n(c.preco_venda), ordem: c.ordem }));
   S.pendencias = pend.map(p => ({ id: p.id, tipo: p.tipo, onde: p.onde, detalhe: p.detalhe, impacto: p.impacto, resolvida: p.resolvida }));
