@@ -8,7 +8,7 @@
 //   supabaseAnonKey: "anon public" (chave pública; pode ficar no código, quem protege os dados é o RLS)
 // Nunca coloque aqui a "service_role key".
 window.FIG_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://manhnmgvcczngtegbngh.supabase.co/rest/v1/',
+  supabaseAnonKey: 'sb_publishable_4ocvS-7t778l6490J8SfjA_SY8cd-uY',
   empresaSlug: 'figueiredo'
 };
